@@ -1,0 +1,179 @@
+--------------------------------------------
+## Docker: How to create a docker swarm in AWS
+##--------------------------------------------
+
+##########################
+##  Docker swarm setup  ##
+##########################
+# Prerequisites
+# 1. AWS EC2 Linux 2 instance
+# 2. docker 1.2 and above
+# 3. docker machine
+# 4. aws cli
+# 5. IAM user with programetic access to create and manage EC2 instance
+# 6. Your AWS VPC, Subnet, Security Groups and AZ info
+
+##  Setup AWS environment variables that will be used to create the docker swarm nodes
+export AWS_ACCESS_KEY_ID=<your_aws_access_key>
+export AWS_SECRET_ACCESS_KEY=<your_aws_secret_key>
+export AWS_DEFAULT_REGION=<your_aws_region>
+export AWS_VPC_ID=<your_aws_vpc_id>
+export AWS_AZ=<your_aws_availability_zone> #a,b,c,d,e...
+export AWS_VPC_SUBNET=<your_aws_subnet_id>
+
+##  Check if env variables are set
+env | grep AWS*
+
+#############################
+##  Create a docker swarm  ##
+#############################
+
+##  Create the docker swarm manager node first.
+docker-machine create -d amazonec2 --amazonec2-vpc-id $AWS_VPC_ID --amazonec2-region $AWS_DEFAULT_REGION --amazonec2-zone $AWS_AZ --amazonec2-instance-type t2.micro --amazonec2-subnet-id $AWS_VPC_SUBNET --amazonec2-security-group docker-swarm docker-swarm-manager
+
+##  Create the two worker nodes
+docker-machine create -d amazonec2 --amazonec2-vpc-id $AWS_VPC_ID --amazonec2-region $AWS_DEFAULT_REGION --amazonec2-zone $AWS_AZ --amazonec2-instance-type t2.micro --amazonec2-subnet-id $AWS_VPC_SUBNET --amazonec2-security-group docker-swarm docker-swarm-node1
+docker-machine create -d amazonec2 --amazonec2-vpc-id $AWS_VPC_ID --amazonec2-region $AWS_DEFAULT_REGION --amazonec2-zone $AWS_AZ --amazonec2-instance-type t2.micro --amazonec2-subnet-id $AWS_VPC_SUBNET --amazonec2-security-group docker-swarm docker-swarm-node2
+
+##  Check all the nodes
+docker-machine ls
+
+Get the internal IP address of the swarm manager.
+docker-machine ssh docker-swarm-manager ifconfig eth0
+
+#172.31.28.158 in my case
+
+##  Point your docker client to the swarm manager.
+eval $(docker-machine env docker-swarm-manager)
+
+##  Initialize Swarm mode.
+docker swarm init --advertise-addr 172.31.28.158 # This is the internal IP of docker manager node.
+#copy the join command along with token
+#docker swarm join --token SWMTKN-1-1j3422kebg2c2xbvvxa27httpzolbosj4eyzdp0jifg5i9zayj-5zedcpcgmwry1k5u7hicketpm 172.31.28.158:2377
+
+##  Modify the security group to allow the swarm communication
+aws ec2 describe-security-groups --filter "Name=group-name,Values=docker-swarm"
+
+##  From this command you should get all the details of the security group.
+##  Including the GroupId. Copy that information and run the following commands:
+SECURITY_GROUP_ID=sg-0705c2cf9df00dade # Replace with your security group id obtained from previous command
+aws ec2 authorize-security-group-ingress --group-id $SECURITY_GROUP_ID --protocol tcp --port 2377 --source-group $SECURITY_GROUP_ID
+aws ec2 authorize-security-group-ingress --group-id $SECURITY_GROUP_ID --protocol tcp --port 7946 --source-group $SECURITY_GROUP_ID
+aws ec2 authorize-security-group-ingress --group-id $SECURITY_GROUP_ID --protocol udp --port 7946 --source-group $SECURITY_GROUP_ID
+aws ec2 authorize-security-group-ingress --group-id $SECURITY_GROUP_ID --protocol tcp --port 4789 --source-group $SECURITY_GROUP_ID
+aws ec2 authorize-security-group-ingress --group-id $SECURITY_GROUP_ID --protocol udp --port 4789 --source-group $SECURITY_GROUP_ID
+
+##  Join the workers to the cluster.
+eval $(docker-machine env docker-swarm-node1)
+docker swarm join --token SWMTKN-1-1j3422kebg2c2xbvvxa27httpzolbosj4eyzdp0jifg5i9zayj-5zedcpcgmwry1k5u7hicketpm 172.31.28.158:2377 # This is the command copied from docker swarm init command's output
+eval $(docker-machine env docker-swarm-node2)
+docker swarm join --token SWMTKN-1-1j3422kebg2c2xbvvxa27httpzolbosj4eyzdp0jifg5i9zayj-5zedcpcgmwry1k5u7hicketpm 172.31.28.158:2377 # This is the command copied from docker swarm init command's output
+
+####################################
+##  Docker Swarm Node Management  ##
+####################################
+
+##  List nodes in the swarm
+eval $(docker-machine env docker-swarm-manager)
+docker node ls
+
+##  Display detailed information on one or more nodes
+docker node inspect self
+
+##  List tasks running on one or more nodes, defaults to current node
+docker node ps docker-swarm-manager
+
+##  Update a node
+docker node update --availability pause docker-swarm-node1
+docker node ls
+docker node update --availability active docker-swarm-node1
+
+##  Promote one or more nodes to manager in the swarm
+docker node promote docker-swarm-node1
+
+##  Demote one or more nodes from manager in the swarm
+docker node demote docker-swarm-manager
+eval $(docker-machine env docker-swarm-node1)
+docker node ls
+docker node promote docker-swarm-manager
+docker node demote docker-swarm-node1
+eval $(docker-machine env docker-swarm-manager)
+docker node ls
+
+########################
+##  Stack Deployment  ##
+########################
+
+##  Create a docker-compose.yml
+vi docker-compose.yml
+------------------
+version: '3'
+services:
+web:
+image: httpd
+ports:
+- "8081:80"
+deploy:
+replicas: 3
+networks:
+- webnet
+visualizer:
+image: dockersamples/visualizer:stable
+ports:
+- "8082:8080"
+volumes:
+- "/var/run/docker.sock:/var/run/docker.sock"
+deploy:
+placement:
+constraints: [node.role == manager]
+networks:
+- webnet
+networks:
+webnet:
+------------------
+:wq
+
+##  Deploy a new stack or update an existing stack
+docker stack deploy -c docker-compose.yml mySTACK
+
+##  List stacks
+docker stack ls
+
+##  List the services in the stack
+docker stack services mySTACK
+
+##  List the tasks in the stack
+docker stack ps mySTACK
+
+##  Check the application
+http://ec2-13-127-148-1.ap-south-1.compute.amazonaws.com:8082 #point to public dns of manager node
+
+##  make sure port 8082 is open
+
+###############
+##  Cleanup  ##
+###############
+
+##  Remove one or more stacks
+docker stack rm mySTACK
+
+##  Remove one or more nodes from the swarm
+docker node rm -f docker-swarm-node1
+docker node rm -f docker-swarm-node2
+
+##  Remove docker machines
+docker-machine rm docker-swarm-node1
+docker-machine rm docker-swarm-node2
+docker-machine rm docker-swarm-manager
+
+##  Swithc to current host
+eval $(docker-machine env -u)
+
+##  Remove the environment variables
+unset AWS_ACCESS_KEY_ID \
+unset AWS_SECRET_ACCESS_KEY \
+unset AWS_DEFAULT_REGION \
+unset AWS_VPC_ID \
+unset AWS_VPC_SUBNET \
+unset AWS_AZ \
+env | grep AWS*
