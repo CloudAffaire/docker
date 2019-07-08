@@ -1,0 +1,233 @@
+##-----------------------
+## Docker: Docker Compose
+##-----------------------
+##  docker-compose [COMMAND]
+
+###################################
+##  Docker compose installation  ##
+###################################
+##  Run this command to download the current stable release of Docker Compose:
+##  please refer https://docs.docker.com/compose/install/ for additional details
+sudo curl -L "https://github.com/docker/compose/releases/download/1.23.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+##  Apply executable permissions to the binary:
+sudo chmod +x /usr/local/bin/docker-compose
+
+##  Test the installation.
+docker-compose --version
+
+###########################
+##  Directory structure  ##
+###########################
+
+# myPROJECT/
+# ├── apache
+# │   └── index.php
+# ├── docker-compose.yml
+# ├── Dockerfile
+# └── mysql
+#     └── data.sql
+
+##  Create directories
+mkdir myPROJECT && cd myPROJECT
+mkdir mysql apache
+
+########################################
+##  Create a docker-compose.yml file  ##
+########################################
+vi docker-compose.yml
+----------------
+version: '3'
+services:
+web:
+build: .
+image: cloudaffaire/myapache:latest
+container_name: apache_container
+links:
+- "db:db"
+ports:
+- "8002:80"
+volumes:
+- ./apache:/var/www/html/
+networks:
+- default
+db:
+image: mysql:5.7.13
+command: --default-authentication-plugin=mysql_native_password
+container_name: mysql_container
+environment:
+- MYSQL_DATABASE=mysqldb
+- MYSQL_USER=admin
+- MYSQL_PASSWORD=admin
+- MYSQL_ROOT_PASSWORD=admin
+ports:
+- "8000:3306"
+volumes:
+- ./mysql:/docker-entrypoint-initdb.d
+phpmyadmin:
+image: phpmyadmin/phpmyadmin
+container_name: phpmyadmin_container
+environment:
+PMA_ARBITRARY: 1
+MYSQL_USER: admin
+MYSQL_PASSWORD: admin
+MYSQL_ROOT_PASSWORD: admin
+ports:
+- "8001:80"
+links:
+- "db:db"
+---------------
+:wq
+
+###########################
+##  Create a Dockerfile  ##
+###########################
+vi Dockerfile
+---------------
+FROM php:7.0.30-apache
+RUN docker-php-ext-install mysqli
+---------------
+:wq
+
+##########################################
+##  Create other files used by the app  ##
+##########################################
+##  Create index.php file under apache directory
+vi apache/index.php
+---------------
+<html>
+<head>
+<title>Docker</title>
+<meta charset="utf-8">
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+</head>
+<body>
+<div class="container">
+<?php echo "<h1>Hello!!.. Welcome to docker compose demo</h1>"; ?>
+<?php
+$conn = mysqli_connect('db', 'admin', 'admin', "mysqldb");
+$query = 'SELECT * From myproduct';
+$result = mysqli_query($conn, $query);
+echo '<table class="table table-striped">';
+echo '<thead><tr><th></th><th>ID</th><th>Name</th><th>Price</th></tr></thead>';
+while($value = $result->fetch_array(MYSQLI_ASSOC)){
+echo '<tr>';
+echo '<td><a href="#"><span class="glyphicon glyphicon-search"></span></a></td>';
+foreach($value as $element){
+echo '<td>' . $element . '</td>';
+}
+echo '</tr>';
+}
+echo '</table>';
+$result->close();
+mysqli_close($conn);
+?>
+</div>
+</body>
+</html>
+--------------
+:wq
+
+##  Create data.sql file under mysql directory
+vi mysql/data.sql
+--------------
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+SET time_zone = "+00:00";
+USE mysqldb;
+CREATE TABLE `myproduct` (
+`id` int(10) NOT NULL,
+`name` varchar(20) NOT NULL,
+`price` int(10) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+INSERT INTO `myproduct` (`id`, `name`, `price`) VALUES
+(1, 'apple', 120),
+(2, 'banana', 80),
+(3, 'mango', 180),
+(4, 'grape', 150);
+--------------
+:wq
+
+#################################
+##  Docker Compose Management  ##
+#################################
+##  Validate and view the Compose file.
+docker-compose config -q
+docker-compose config --services
+
+##  Build the service
+docker-compose build
+
+##  Start the service
+docker-compose up -d
+
+##  Test the application
+##  Replace your ec2 public DNS or localhost if you are using your own system
+ec2-13-234-163-168.ap-south-1.compute.amazonaws.com:8002 #test web, db
+ec2-13-234-163-168.ap-south-1.compute.amazonaws.com:8001 #test phpmyadmin
+
+##  List images used by the created containers
+docker-compose images
+
+##  Print the public port for a port binding.
+docker-compose port web 80
+docker-compose port db 3306
+docker-compose port phpmyadmin 80
+
+##  List service containers
+docker-compose ps
+
+##  Receive real time events from containers
+docker-compose events
+
+##  Display the running processes
+docker-compose top web
+
+##  View output from containers
+docker-compose logs web
+
+##  Pause services
+docker-compose pause web
+
+##  Unpause services
+docker-compose unpause web
+
+##  Execute a command in a running container
+docker-compose exec web bash
+exit
+
+##  Run a one-off command
+docker-compose exec db bash
+
+##  Stop services
+docker-compose stop web
+
+##  Start services
+docker-compose start web
+
+##  Restart services
+docker-compose restart web
+
+##  Remove the service
+docker-compose down
+
+##  Generate a Docker bundle from the Compose file
+docker-compose bundle --push-images
+
+##  Push services (make sure you are logged into docker hub)
+docker-compose up -d
+docker-compose push web
+
+##  Pull service images
+docker-compose pull web
+
+##  Kill containers
+docker-compose kill web
+docker-compose kill db
+docker-compose kill phpmyadmin
+
+##  Remove stopped containers
+docker-compose rm web
+docker-compose rm db
+docker-compose rm phpmyadmin
