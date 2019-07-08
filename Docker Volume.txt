@@ -1,0 +1,29 @@
+##--------------------------
+## Docker: Volume Management
+##--------------------------
+##  docker volume [COMMAND]
+
+##  Create a volume
+##  docker volume create <volume_name>
+docker volume create myVOLUME
+
+##  List all volumes
+##  docker volume ls
+docker volume ls
+
+##  Display detailed information on one or more volumes
+##  docker volume inspect <volume_name>
+docker volume inspect myVOLUME
+
+##  Create a container with volume
+##  docker container run --name <container_name> --publish <host_port>:<container_port> --volume <volume_name> --detach <image_name>
+##  remove the container if already exist, docker container rm -f myWEBSERVER
+docker container run --name myWEBSERVER --publish 80:80 --volume myVOLUME --detach myhttpd
+
+##  Remove all unused local volumes
+docker volume prune
+## press N to abort
+
+##  Remove one or more volumes
+##  docker volume rm <volume_name>
+docker volume rm myVOLUME
