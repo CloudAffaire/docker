@@ -1,0 +1,69 @@
+##---------------------
+## Docker: Docker Stack
+##---------------------
+##  docker stack [OPTIONS] COMMAND
+
+###########################
+##  Swarm Configuration  ##
+###########################
+
+# hostnames ip           os       role
+# --------- ------------ -------- ------------
+# system1   192.168.0.10 Centos 7 Manager Node
+# system2   192.168.0.20 Centos 7 Worker Node One
+# system3   192.168.0.30 Centos 7 Worker Node Two
+
+########################
+##  Stack Deployment  ##
+########################
+
+##  login to the manager node (192.168.0.10)
+##  create a docker-compose.yml
+vi docker-compose.yml
+------------------
+version: '3'
+services:
+web:
+image: httpd
+ports:
+- "8081:80"
+deploy:
+replicas: 3
+networks:
+- webnet
+visualizer:
+image: dockersamples/visualizer:stable
+ports:
+- "8082:8080"
+volumes:
+- "/var/run/docker.sock:/var/run/docker.sock"
+deploy:
+placement:
+constraints: [node.role == manager]
+networks:
+- webnet
+networks:
+webnet:
+------------------
+:wq
+
+##  Deploy a new stack or update an existing stack
+docker stack deploy -c docker-compose.yml mySTACK
+
+##  List stacks
+docker stack ls
+
+##  List the services in the stack
+docker stack services mySTACK
+
+##  List the tasks in the stack
+docker stack ps mySTACK
+
+##  Check the application
+
+192.168.0.10:8082 #since mySTACK_visualizer.1 is running in system1, change as required
+
+#make sure port 8082 is open
+
+##  Remove one or more stacks
+docker stack rm mySTACK
