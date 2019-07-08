@@ -1,0 +1,102 @@
+##-----------------------------
+## Docker: Container Management
+##-----------------------------
+##  docker container [COMMAND]
+
+## Create a new docker container
+## docker container create --name <container_name> --publish <host_port>:<container_port> <image>
+docker container create --name myWEBSERVER --publish 80:80 httpd
+
+## List all containers
+docker container ls -as
+
+## Start a docker container
+## docker container start <container_id or container_name>
+docker container start myWEBSERVER
+
+## Display detailed information on one or more containers
+## docker container inspect <container_name or container_id>
+docker container inspect myWEBSERVER
+
+## Display container logs
+## docker container logs <container_name or container_id>
+docker container logs myWEBSERVER
+
+## List port mappings or a specific mapping for the container
+## docker container port <container_name or container_id>
+docker container port myWEBSERVER
+
+## Get inside a docker container
+## docker container exec -it <container_name or container_id> bash
+docker container exec -it myWEBSERVER bash
+exit
+
+## Copy a file from localhost to docker container
+## docker container cp <local_source> <container_id:destination or container_name:destination>
+## docker container cp <container_id:source or container_name:source> <local_destination>
+echo "hello world" > sample_data.txt
+docker container cp /home/ec2-user/sample_data.txt myWEBSERVER:/usr/local/apache2/htdocs #copy from host to container
+docker container cp myWEBSERVER:/usr/local/apache2/htdocs/index.html /home/ec2-user/ #copy from container to host
+ls
+
+## Inspect changes to files or directories on a container's filesystem
+## docker container diff <container_id or container_name>
+docker container diff myWEBSERVER
+
+## Export a container"s filesystem as a tar archive
+## docker container export -o <name>.tar <container_id or container_name>
+docker container export -o myWEBSERVER_backup.tar myWEBSERVER
+
+## Display a live stream of container(s) resource usage statistics
+## docker container stats -a
+## docker container stats <container_id or container_name>
+docker container stats myWEBSERVER
+
+## Display the running processes of a container
+## docker container top <container_id or container_name>
+docker container top myWEBSERVER
+
+## Pause all processes within one or more containers
+## docker container pause <container_id or container_name>
+docker container pause myWEBSERVER
+
+## Unpause all processes within one or more containers
+## docker container unpause <container_id or container_name>
+docker container unpause myWEBSERVER
+
+## Restart one or more containers
+## docker container restart <container_id or container_name>
+docker container restart myWEBSERVER
+
+## Rename a container
+## docker container rename <container_old_name> <container_new_name>
+docker container rename myWEBSERVER myWEBSERVERNEW
+
+## Create a new image from a container"s changes
+## docker container commit -a "<author_info>" <container_id or container_name> <image_name>
+docker container commit -a "Debjeet Bhowmik" myWEBSERVERNEW myhttpd
+
+## Update configuration of one or more containers
+docker container update --kernel-memory 200M myWEBSERVERNEW
+
+## Stop one or more running containers
+## docker container stop <container_id or container_name>
+docker container stop myWEBSERVERNEW
+
+## Kill one or more running containers
+## docker container kill <container_id or container_name>
+docker container kill myWEBSERVERNEW
+
+## Remove one or more containers
+## docker container rm <container_id or container_name>
+docker container rm myWEBSERVERNEW
+
+## Remove all stopped containers
+## docker container prune
+docker container prune
+
+## Run a docker container
+docker container run --name myWEBSERVER --publish 80:80 --detach myhttpd
+
+## Cleanup (If you want to continue with the next demo, do not remove)
+docker container rm -f myWEBSERVER
