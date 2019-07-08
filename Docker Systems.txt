@@ -1,0 +1,42 @@
+##--------------------------
+## Docker: System Management
+##--------------------------
+##  docker system [COMMAND]
+##  Manage Docker
+##  Usage: docker system COMMAND
+##  Commands:
+##  df     : Show docker disk usage
+##  events : Get real time events from the server
+##  info   : Display system-wide information
+##  prune  : Remove unused data
+
+##  Show docker disk usage
+##  Usage: docker system df [OPTIONS]
+##  Options:
+##  --format      : String Pretty-print images using a Go template
+##  -v, --verbose : Show detailed information on space usage
+docker system df
+
+##  Display system-wide information
+##  Usage: docker system info [OPTIONS]
+##  Options:
+##  -f, --format : string Format the output using the given Go template
+docker system info
+
+##  Get real time events from the server
+##  Usage: docker system events [OPTIONS]
+##  Options:
+##  -f, --filter filter : Filter output based on conditions provided
+##  --format string     : Format the output using the given Go template
+##  --since string      : Show all events created since timestamp
+##  --until string      : Stream events until this timestamp
+docker system events
+
+##  Remove unused data
+##  Usage: docker system prune [OPTIONS]
+##  Options:
+##  -a, --all       : Remove all unused images not just dangling ones
+##  --filter filter : Provide filter values (e.g. 'label=<key>=<value>')
+##  -f, --force     : Do not prompt for confirmation
+##  --volumes       : Prune volumes
+docker system prune
