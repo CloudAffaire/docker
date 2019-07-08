@@ -65,3 +65,14 @@ docker image tag myimage:latest cloudaffaire/myimage:latest
 ##  Push an image or a repository to a registry
 ##  docker image push hub/image:tag
 docker image push cloudaffaire/myimage:latest
+
+##  Pull an image or a repository from a registry
+##  docker image pull hub/image:tag
+docker image pull cloudaffaire/myimage:latest
+
+##  Remove unused images
+docker image prune
+
+##  Remove one or more images
+##  docker image rm <image_name or image_id>
+docker image rm myimage
