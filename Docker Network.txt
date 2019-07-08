@@ -1,0 +1,33 @@
+##---------------------------
+## Docker: Network Management
+##---------------------------
+##  docker network [COMMAND]
+
+##  Create a network
+##  docker network create <network_name>
+docker network create myBRIDGENETWORK
+
+##  List networks
+##  docker network ls
+docker network ls -f "driver=bridge"
+
+##  Display detailed information on one or more networks
+##  docker network inspect <network_name or network_id>
+docker network inspect myBRIDGENETWORK
+
+##  Connect a container to a network
+##  docker network connect <network_name> <container_name>
+##  docker container run --name myWEBSERVER --publish 80:80 --detach httpd #create the container if not created already
+docker network connect myBRIDGENETWORK myWEBSERVER
+
+##  Disconnect a container from a network
+##  docker network disconnect <network_name> <container_name>
+docker network disconnect myBRIDGENETWORK myWEBSERVER
+
+##  Remove all unused networks
+docker network prune
+## press N
+
+##  Remove one or more networks
+##  docker network rm <network_name>
+docker network rm myBRIDGENETWORK
