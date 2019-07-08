@@ -1,0 +1,121 @@
+##-----------------------
+## Docker: Docker Machine
+##-----------------------
+##  docker-machine Commands
+
+############################
+##  docker machine setup  ##
+############################
+#  Prerequisites
+#  1. AWS EC2 Linux 2 instance
+#  2. docker 1.2 and above
+#  3. aws cli
+#  4. IAM user with programetic access to create and manage EC2 instance
+#  5. Your AWS VPC, Subnet, Security Groups and AZ info
+
+##  We have already instaled docker and aws cli
+docker --version
+aws --version
+
+##  Install docker machine
+##  reference: https://docs.docker.com/machine/install-machine/
+##  Download the Docker Machine binary and extract it to your PATH.
+base=https://github.com/docker/machine/releases/download/v0.16.0 &&
+curl -L $base/docker-machine-$(uname -s)-$(uname -m) >/tmp/docker-machine &&
+sudo install /tmp/docker-machine /usr/local/bin/docker-machine
+
+##  Check the installation by displaying the Machine version:
+docker-machine version
+
+##  Setup AWS environment variables that will be used to create the docker swarm nodes
+export AWS_ACCESS_KEY_ID=<your_aws_access_key>
+export AWS_SECRET_ACCESS_KEY=<your_aws_secret_key>
+export AWS_DEFAULT_REGION=<your_aws_region>
+export AWS_VPC_ID=<your_aws_vpc_id>
+export AWS_AZ=<your_aws_availability_zone> #a,b,c,d,e...
+export AWS_VPC_SUBNET=<your_aws_subnet_id>
+
+##  check if env variables are set
+env | grep AWS*
+
+#################################
+##  Docker Machine Management  ##
+#################################
+
+##  Create a machine in AWS EC2 (create a swarm manager)
+docker-machine create -d amazonec2 --amazonec2-vpc-id $AWS_VPC_ID --amazonec2-region $AWS_DEFAULT_REGION --amazonec2-zone $AWS_AZ --amazonec2-instance-type t2.micro --amazonec2-subnet-id $AWS_VPC_SUBNET --amazonec2-security-group docker-swarm docker-swarm-manager
+
+##  List machines
+docker-machine ls
+
+##  Log into or run a command on a machine with SSH. (get docker swarm manager private ip address)
+docker-machine ssh docker-swarm-manager ifconfig eth0
+
+#172.31.23.204 in my case
+
+##  Get the public IP address of a machine
+docker-machine ip docker-swarm-manager
+
+##  Display the commands to set up the environment for the Docker client (Point your docker client to the swarm manager)
+eval $(docker-machine env docker-swarm-manager)
+
+##  Initialize Swarm mode.
+docker swarm init --advertise-addr 172.31.23.204 # This is the internal IP of docker manager node.
+
+##  Print which machine is active
+docker-machine active
+
+##  Inspect information about a machine
+docker-machine inspect docker-swarm-manager
+
+##  Get the status of a machine
+docker-machine status docker-swarm-manager
+
+##  Get the URL of a machine
+docker-machine url docker-swarm-manager
+
+##  Regenerate TLS Certificates for a machine
+docker-machine regenerate-certs docker-swarm-manager
+
+##  Upgrade a machine to the latest version of Docker
+docker-machine upgrade docker-swarm-manager
+
+##  Stop a machine
+docker-machine stop docker-swarm-manager
+
+##  Start a machine
+docker-machine start docker-swarm-manager
+
+##  Restart a machine
+docker-machine restart docker-swarm-manager
+
+##  Re-provision existing machines
+docker-machine provision docker-swarm-manager
+
+##  Copy files between machines
+docker-machine scp [[user@]machine:][path]] [[user@]machine:][path]]
+
+##  Mount or unmount a directory from a machine with SSHFS.
+##  docker-machine mount [machine:][path] [mountpoint]
+##  You must have a copy of the sshfs binary locally to use the mount feature
+mkdir test
+docker-machine ssh docker-swarm-manager mkdir test
+docker-machine mount docker-swarm-manager:/home/docker/test test
+touch test/data
+docker-machine ssh docker-swarm-manager ls test/data
+docker-machine mount -u docker-swarm-manager:/home/docker/test test
+
+##  Remove a machine
+docker-machine rm docker-swarm-manager
+
+##  Swithc to current host
+eval $(docker-machine env -u)
+
+##  Remove the environment variables
+unset AWS_ACCESS_KEY_ID \
+unset AWS_SECRET_ACCESS_KEY \
+unset AWS_DEFAULT_REGION \
+unset AWS_VPC_ID \
+unset AWS_VPC_SUBNET \
+unset AWS_AZ \
+env | grep AWS*
