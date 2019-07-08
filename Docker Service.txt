@@ -1,0 +1,52 @@
+##------------------------
+## Docker: Docker Services
+##------------------------
+##  docker service COMMAND
+
+###########################
+##  Swarm Configuration  ##
+###########################
+# hostnames ip           os       role
+# --------- ------------ -------- ------------
+# system1   192.168.0.10 Centos 7 Manager Node
+# system2   192.168.0.20 Centos 7 Worker Node One
+# system3   192.168.0.30 Centos 7 Worker Node Two
+
+###############################
+##  Deploy a docker service  ##
+###############################
+
+##  Login to docker swarm manager node (192.168.0.10)
+##  Create a network
+docker network create -d overlay myhttpdnet
+
+##  Create a new service
+docker service create --name myhttpdservice --replicas 2 --publish 8080:80/tcp --network myhttpdnet httpd
+
+#################################
+##  Docker service management  ##
+#################################
+
+##  List services
+docker service ls
+
+##  Display detailed information on one or more services
+docker service inspect myhttpdservice
+
+##  Fetch the logs of a service or task
+docker service logs myhttpdservice
+
+##  List the tasks of one or more services
+docker service ps myhttpdservice
+
+##  Scale one or multiple replicated services
+docker service scale myhttpdservice=3
+
+##  Update a service
+docker service update --publish-add 8000:80/tcp myhttpdservice
+
+##  Revert changes to a service"s configuration
+docker service rollback myhttpdservice
+
+##  Remove one or more services
+docker service rm myhttpdservice
